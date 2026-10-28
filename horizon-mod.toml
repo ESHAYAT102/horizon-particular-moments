@@ -1,0 +1,8 @@
+id = "horizon_particular_moments"
+name = "Horizon Particular Moments"
+version = "0.1.0"
+description = "Original falling leaves, dusk fireflies, and water-entry splashes."
+authors = ["ESHAYAT102"]
+api = "0.2"
+capabilities = ["game-read", "render"]
+experimental = ["render"]

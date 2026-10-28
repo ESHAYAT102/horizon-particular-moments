@@ -1,0 +1,14 @@
+[package]
+name = "horizon-particular-moments"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+horizon-mod-sdk = { git = "https://github.com/ESHAYAT102/horizon", rev = "f3e7316c59b2644da99c7a1fce4478603c4bb103" }
+
+[workspace]
