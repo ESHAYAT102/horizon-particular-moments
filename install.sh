@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-version=v0.1.0
+version=v0.1.1
 home=${HORIZON_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/horizon}
 dest="$home/horizon-mods/horizon_particular_moments.hmod"
 url="https://github.com/ESHAYAT102/horizon-particular-moments/releases/download/$version/horizon_particular_moments.hmod"

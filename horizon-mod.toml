@@ -1,6 +1,6 @@
 id = "horizon_particular_moments"
 name = "Horizon Particular Moments"
-version = "0.1.0"
+version = "0.1.1"
 description = "Original falling leaves, dusk fireflies, and water-entry splashes."
 authors = ["ESHAYAT102"]
 api = "0.2"

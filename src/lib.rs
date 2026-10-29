@@ -86,13 +86,13 @@ impl Mod for Moments {
             render::emit_particles(&splashes[..splashes.len().min(24)]);
         }
 
-        if !tick.is_multiple_of(8) {
+        if !tick.is_multiple_of(4) {
             return;
         }
-        let x = (player.x + offset(tick)).floor() as i32;
-        let z = (player.z + offset(tick ^ 0xaaaa)).floor() as i32;
+        let x = (player.x + offset(tick) * 0.5).floor() as i32;
+        let z = (player.z + offset(tick ^ 0xaaaa) * 0.5).floor() as i32;
         let y = player.y.floor() as i32;
-        for height in [1, 3, 5] {
+        for height in [2, 3, 4, 5, 6] {
             let Some(sample) = game::sample_block(x, y + height, z) else {
                 continue;
             };
@@ -123,8 +123,12 @@ impl Mod for Moments {
         let dusk = game::get_clock()
             .is_some_and(|clock| (11500..=14500).contains(&(clock.day_time % 24000)));
         if dusk {
-            let fx = (player.x + offset(tick ^ 17)).floor() as i32;
-            let fz = (player.z + offset(tick ^ 97)).floor() as i32;
+            // Keep fireflies near the player's view instead of scattering them behind the camera.
+            let yaw = f64::from(player.yaw).to_radians();
+            let distance = 2.5 + offset(tick ^ 17).abs() * 0.25;
+            let sideways = offset(tick ^ 97) * 0.3;
+            let fx = (player.x - yaw.sin() * distance + yaw.cos() * sideways).floor() as i32;
+            let fz = (player.z + yaw.cos() * distance + yaw.sin() * sideways).floor() as i32;
             if let Some(sample) = game::sample_block(fx, y + 1, fz) {
                 if sample.state == "minecraft:air"
                     && warm_biome(&sample.biome)
@@ -134,13 +138,13 @@ impl Mod for Moments {
                         particle: particle(
                             render::AmbientParticle::EndRod,
                             fx as f64 + 0.5,
-                            player.y + 0.5,
+                            player.y + 1.1 + offset(tick ^ 211) * 0.08,
                             fz as f64 + 0.5,
                         ),
                         color: 0xffe879,
                         alpha: 0.8,
-                        size: 0.035,
-                        lifetime: 55,
+                        size: 0.085,
+                        lifetime: 75,
                         gravity: 0.0,
                         friction: 0.99,
                         collision: false,

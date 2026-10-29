@@ -2,6 +2,8 @@
 
 An original Horizon mod inspired by the ambience of [Particular](https://modrinth.com/mod/particular-reforged). It adds falling leaves near trees, small fireflies in warm biomes at dusk, and splashes when nearby entities enter water. This is not a port and does not use Particular's source or artwork.
 
+To see fireflies, stand outdoors in a plains or forest and set the time to dusk (`/time set 12000` in a world with commands enabled). Fireflies appear a few blocks ahead of the camera. Falling leaves need nearby overhead leaf blocks. Water splashes need a fast entry into water. The effects do not appear on the title screen.
+
 **Requires:** Horizon with mod API 14+ ([PR #2888](https://github.com/horizon-rust/horizon/pull/2888)). The current official client does not yet include these APIs. The mod is client-side. It does not edit worlds or require server installation.
 
 ## Install
