@@ -15,6 +15,14 @@ fn offset(n: u64) -> f64 {
     (mix(n) % 1600) as f64 / 100.0 - 8.0
 }
 
+fn firefly_site(cell_x: i32, cell_z: i32) -> (i32, i32) {
+    let seed = mix((cell_x as u32 as u64) << 32 | cell_z as u32 as u64);
+    (
+        cell_x * 8 + 1 + (seed % 6) as i32,
+        cell_z * 8 + 1 + (mix(seed) % 6) as i32,
+    )
+}
+
 fn leaves(state: &str) -> bool {
     state.starts_with("minecraft:") && state.split('[').next().unwrap_or("").ends_with("_leaves")
 }
@@ -120,38 +128,68 @@ impl Mod for Moments {
             }
         }
 
-        let dusk = game::get_clock()
-            .is_some_and(|clock| (11500..=14500).contains(&(clock.day_time % 24000)));
-        if dusk {
-            // Keep fireflies near the player's view instead of scattering them behind the camera.
-            let yaw = f64::from(player.yaw).to_radians();
-            let distance = 2.5 + offset(tick ^ 17).abs() * 0.25;
-            let sideways = offset(tick ^ 97) * 0.3;
-            let fx = (player.x - yaw.sin() * distance + yaw.cos() * sideways).floor() as i32;
-            let fz = (player.z + yaw.cos() * distance + yaw.sin() * sideways).floor() as i32;
-            if let Some(sample) = game::sample_block(fx, y + 1, fz) {
-                if sample.state == "minecraft:air"
-                    && warm_biome(&sample.biome)
-                    && sample.sky_light > 0
-                {
-                    render::emit_configured_particles(&[render::ConfiguredParticle {
-                        particle: particle(
-                            render::AmbientParticle::EndRod,
-                            fx as f64 + 0.5,
-                            player.y + 1.1 + offset(tick ^ 211) * 0.08,
-                            fz as f64 + 0.5,
-                        ),
-                        color: 0xffe879,
-                        alpha: 0.8,
-                        size: 0.085,
-                        lifetime: 75,
-                        gravity: 0.0,
-                        friction: 0.99,
-                        collision: false,
-                        full_bright: true,
-                    }]);
-                }
+        if !game::get_clock()
+            .is_some_and(|clock| (11500..=23000).contains(&(clock.day_time % 24000)))
+            || !tick.is_multiple_of(12)
+        {
+            return;
+        }
+
+        // A site's coordinates depend on the world grid, never the camera or player position.
+        let cell = (tick / 12 % 9) as i32;
+        let (fx, fz) = firefly_site(
+            (player.x.floor() as i32).div_euclid(8) + cell % 3 - 1,
+            (player.z.floor() as i32).div_euclid(8) + cell / 3 - 1,
+        );
+        if (fx as f64 - player.x).abs() > 12.0 || (fz as f64 - player.z).abs() > 12.0 {
+            return;
+        }
+        for ground_y in (y - 8..=y + 3).rev() {
+            let Some(ground) = game::sample_block(fx, ground_y, fz) else {
+                break;
+            };
+            if ground.state == "minecraft:air" || ground.fluid != "minecraft:empty" {
+                continue;
             }
+            if !warm_biome(&ground.biome) {
+                break;
+            }
+            let Some(air) = game::sample_block(fx, ground_y + 2, fz) else {
+                break;
+            };
+            if air.state != "minecraft:air"
+                || !game::sample_block(fx, ground_y + 1, fz)
+                    .is_some_and(|above| above.fluid == "minecraft:empty")
+                || !game::sample_block(fx, ground_y + 6, fz)
+                    .is_some_and(|above| above.state == "minecraft:air")
+            {
+                break;
+            }
+            let seed = mix(tick ^ ((fx as u32 as u64) << 32) ^ fz as u32 as u64);
+            let mut glow = particle(
+                render::AmbientParticle::EndRod,
+                fx as f64 + 0.5 + offset(seed) * 0.13,
+                ground_y as f64 + 1.0 + (mix(seed ^ 11) % 120) as f64 / 100.0,
+                fz as f64 + 0.5 + offset(seed ^ 23) * 0.13,
+            );
+            glow.velocity_x = offset(seed ^ 31) * 0.0005;
+            glow.velocity_y = offset(seed ^ 41) * 0.00025;
+            glow.velocity_z = offset(seed ^ 53) * 0.0005;
+            render::emit_sprite_particles(&[render::SpriteParticle {
+                sprite: "horizon_particular_moments:particle/firefly".into(),
+                particle: render::ConfiguredParticle {
+                    particle: glow,
+                    color: 0xffe8a0,
+                    alpha: 0.7,
+                    size: 0.025,
+                    lifetime: 120,
+                    gravity: 0.0,
+                    friction: 0.995,
+                    collision: false,
+                    full_bright: true,
+                },
+            }]);
+            break;
         }
     }
 }
@@ -171,6 +209,14 @@ mod tests {
         assert!(!warm_biome("minecraft:snowy_plains"));
         for n in 0..1000 {
             assert!((-8.0..8.0).contains(&offset(n)));
+        }
+        for x in -3..3 {
+            for z in -3..3 {
+                let (px, pz) = firefly_site(x, z);
+                assert!((x * 8 + 1..x * 8 + 7).contains(&px));
+                assert!((z * 8 + 1..z * 8 + 7).contains(&pz));
+                assert_eq!((px, pz), firefly_site(x, z));
+            }
         }
     }
 }
